@@ -7,7 +7,7 @@ const router = Router();
 router.get('/', async (req, res) => {
   try {
     const data = await pool.query(
-      'SELECT id, first_name, last_name FROM public.users',
+      'SELECT id, first_name, last_name, gender, isActive FROM public.users ORDER BY id',
     );
 
     res.json({
@@ -32,6 +32,33 @@ router.get('/:userId', async (req, res) => {
       status: 200,
       message: 'Successfully completed operation',
       data: data.rows,
+    });
+  } catch (error) {
+    res.status(500).json({ status: 500, message: error.message });
+  }
+});
+
+// delete user
+
+router.delete('/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ status: 400, message: 'userId is required' });
+    }
+
+    const data = await pool.query(
+      'DELETE FROM public.users WHERE id = $1 RETURNING *',
+      [userId],
+    );
+
+    res.json({
+      status: 200,
+      message: 'Succsessfulle deleted a user',
+      data: data.rows[0],
     });
   } catch (error) {
     res.status(500).json({ status: 500, message: error.message });
