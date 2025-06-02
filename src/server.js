@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import router from './routers/index.js';
+import cookieParser from 'cookie-parser';
 
 import { getEnvVar } from './utils/getEnvVar.js';
 
@@ -11,7 +12,7 @@ export const startServer = () => {
 
   app.use(cors());
   app.use(express.json());
-
+  app.use(cookieParser());
   app.use(router);
 
   app.listen(PORT, () => {
