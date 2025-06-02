@@ -48,7 +48,7 @@ router.post('/login', async (req, res) => {
 
   try {
     const userData = await pool.query(
-      'SELECT id, email, password FROM users WHERE email = $1',
+      'SELECT id, first_name, last_name, email, password FROM users WHERE email = $1',
       [email],
     );
 
@@ -69,10 +69,12 @@ router.post('/login', async (req, res) => {
       userData.rows[0].id,
     ]);
 
-    const accessToken = randomBytes(30).toString('base64');
-    const refreshToken = randomBytes(30).toString('base64');
-    const accessTokenValidUntil = new Date(Date.now() + FIFTEEN_MINUTES);
-    const refreshTokenValidUntil = new Date(Date.now() + THIRTY_DAYS);
+    const {
+      accessToken,
+      refreshToken,
+      accessTokenValidUntil,
+      refreshTokenValidUntil,
+    } = createSession();
 
     const data = await pool.query(
       'INSERT INTO public.sessions(user_id, access_token, refresh_token, access_token_valid_until, refresh_token_valid_until) VALUES ($1, $2, $3, $4, $5) RETURNING *',
@@ -85,13 +87,17 @@ router.post('/login', async (req, res) => {
       ],
     );
 
-    setupSession(res, data.rows[0]);
+    setupSession(res, {
+      id: data.rows[0].id,
+      refreshToken: data.rows[0].refresh_token,
+    });
 
     res.json({
       status: 201,
       message: 'Successfully login a user',
       data: {
         accessToken: data.rows[0].access_token,
+        ...userData.rows[0],
       },
     });
   } catch (error) {
