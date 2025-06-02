@@ -43,26 +43,4 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
-  const { name, price, country_origin, rating } = req.body;
-
-  try {
-    const data = await pool.query(
-      'INSERT INTO assortment_goods (name, price, country_origin, rating) VALUES ($1, $2, $3, $4) RETURNING *',
-      [name, price, country_origin, rating],
-    );
-
-    res.json({
-      status: 201,
-      message: 'Successfully created a good',
-      data: data.rows[0],
-    });
-  } catch (error) {
-    res.json({
-      status: 500,
-      message: error.message,
-    });
-  }
-});
-
 export default router;
