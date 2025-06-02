@@ -105,4 +105,23 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// logout user
+
+router.post('/logout', async (req, res) => {
+  try {
+    if (req.cookies.sessionId) {
+      await pool.query('delete from sessions where id = $1', [
+        req.cookies.sessionId,
+      ]);
+    }
+
+    res.clearCookie('sessionId');
+    res.clearCookie('refreshToken');
+
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ status: 500, message: error.message });
+  }
+});
+
 export default router;
