@@ -3,6 +3,7 @@ import { pool } from '../../dbSQL.js';
 import bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { FIFTEEN_MINUTES, THIRTY_DAYS } from '../../constants/index.js';
+import { createSession, setupSession } from '../../utils/sessionsSettings.js';
 
 const router = Router();
 
@@ -84,14 +85,7 @@ router.post('/login', async (req, res) => {
       ],
     );
 
-    res.cookie('refreshToken', data.rows[0].refreshToken, {
-      httpOnly: true,
-      expires: new Date(Date.now() + THIRTY_DAYS),
-    });
-    res.cookie('sessionId', data.rows[0].id, {
-      httpOnly: true,
-      expires: new Date(Date.now() + THIRTY_DAYS),
-    });
+    setupSession(res, data.rows[0]);
 
     res.json({
       status: 201,
@@ -119,6 +113,67 @@ router.post('/logout', async (req, res) => {
     res.clearCookie('refreshToken');
 
     res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ status: 500, message: error.message });
+  }
+});
+
+// refresh user session
+
+router.post('/refresh', async (req, res) => {
+  try {
+    const session = await pool.query('SELECT * from sessions where id = $1', [
+      req.cookies.sessionId,
+    ]);
+
+    if (session.rows[0] == 0) {
+      throw res.status(401).json({
+        status: 401,
+        message: 'Session not found',
+      });
+    }
+
+    const isSessionTokenExpired =
+      new Date() > new Date(session.rows[0].refreshTokenValidUntil);
+
+    if (isSessionTokenExpired) {
+      throw res.status(401).json({
+        status: 401,
+        message: 'Session token expired',
+      });
+    }
+
+    await pool.query('DELETE from sessions WHERE user_id = $1', [
+      session.rows[0].user_id,
+    ]);
+
+    const {
+      accessToken,
+      refreshToken,
+      accessTokenValidUntil,
+      refreshTokenValidUntil,
+    } = createSession();
+
+    const data = await pool.query(
+      'INSERT INTO public.sessions(user_id, access_token, refresh_token, access_token_valid_until, refresh_token_valid_until) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [
+        session.rows[0].user_id,
+        accessToken,
+        refreshToken,
+        accessTokenValidUntil,
+        refreshTokenValidUntil,
+      ],
+    );
+
+    setupSession(res, data.rows[0]);
+
+    res.json({
+      status: 200,
+      message: 'Successfully refreshed a session!',
+      data: {
+        accessToken: data.rows[0].access_token,
+      },
+    });
   } catch (error) {
     res.status(500).json({ status: 500, message: error.message });
   }
