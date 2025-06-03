@@ -9,6 +9,17 @@ router.post('/addToCart', async (req, res) => {
   const { userId, goodId, quantity } = req.body;
 
   try {
+    const selectedGood = await pool.query(
+      'SELECT stock_quantity from assortment_goods WHERE id = $1',
+      [goodId],
+    );
+
+    if (selectedGood.rows[0].stock_quantity < quantity)
+      return res.status(400).json({
+        status: 400,
+        message: 'Not enough goods in stock',
+      });
+
     const data = await pool.query(
       'INSERT INTO cart_items (user_id, product_id, quantity) VALUES ($1, $2, $3) RETURNING *',
       [userId, goodId, quantity],
@@ -31,7 +42,7 @@ router.get('/getCartContents', async (req, res) => {
   const { userId } = req.query;
   try {
     const data = await pool.query(
-      'SELECT * FROM cart_items WHERE user_id = $1',
+      'SELECT  ag.*, ci.quantity, ci.id AS cart_item_id, ci.user_id, ci.added_at FROM cart_items ci JOIN  assortment_goods ag ON  ci.product_id = ag.id WHERE ci.user_id = $1;',
       [userId],
     );
 
