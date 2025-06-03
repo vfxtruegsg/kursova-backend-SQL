@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { pool } from '../../dbSQL.js';
+import { randomBytes } from 'crypto';
 
 const router = Router();
 
@@ -50,6 +51,56 @@ router.get('/getCartContents', async (req, res) => {
       status: 200,
       message: 'Successfully found products for order',
       data: data.rows,
+    });
+  } catch (error) {
+    res.json({
+      status: 500,
+      message: error.message,
+    });
+  }
+});
+
+router.post('/cleanCart', async (req, res) => {
+  const { userId } = req.body;
+  try {
+    await pool.query('DELETE FROM cart_items WHERE user_id = $1', [userId]);
+
+    res.status(204).send();
+  } catch (error) {
+    res.json({
+      status: 500,
+      message: error.message,
+    });
+  }
+});
+
+// orders
+
+router.post('/placeOrder', async (req, res) => {
+  const { totalAmount, shippingAddress, customerId, orderedCart, quantity } =
+    req.body;
+
+  const randomNumber = () => Math.trunc(Math.random() * 10);
+  const genrateTrackingNum = (str) => str.replace(/X/g, randomNumber);
+
+  try {
+    const data = await pool.query(
+      'INSERT INTO orders (total_amount, shipping_address, status, tracking_number, customer_id, fk_ordered_cart, quantity) 	VALUES ($1, $2, $3,  $4, $5, $6, $7) RETURNING *',
+      [
+        totalAmount,
+        shippingAddress,
+        'in progress',
+        genrateTrackingNum('UB5775XXXXXHK'),
+        customerId,
+        orderedCart,
+        quantity,
+      ],
+    );
+
+    res.json({
+      status: 201,
+      message: 'Successfully created your order',
+      data: data.rows[0],
     });
   } catch (error) {
     res.json({
