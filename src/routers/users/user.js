@@ -1,8 +1,6 @@
 import { Router } from 'express';
 import { pool } from '../../dbSQL.js';
 import bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
-import { FIFTEEN_MINUTES, THIRTY_DAYS } from '../../constants/index.js';
 import { createSession, setupSession } from '../../utils/sessionsSettings.js';
 
 const router = Router();

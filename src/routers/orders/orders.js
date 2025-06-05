@@ -21,6 +21,11 @@ router.post('/addToCart', async (req, res) => {
         message: 'Not enough goods in stock',
       });
 
+    await pool.query(
+      'UPDATE assortment_goods SET stock_quantity = stock_quantity - $1 WHERE id = $2',
+      [quantity, goodId],
+    );
+
     const data = await pool.query(
       'INSERT INTO cart_items (user_id, product_id, quantity) VALUES ($1, $2, $3) RETURNING *',
       [userId, goodId, quantity],
