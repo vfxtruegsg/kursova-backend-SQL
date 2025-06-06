@@ -115,4 +115,24 @@ router.post('/placeOrder', async (req, res) => {
   }
 });
 
+router.post('/removeFromCart', async (req, res) => {
+  const { id, quantity } = req.body;
+
+  try {
+    await pool.query('DELETE FROM cart_items WHERE id = $1', [id]);
+
+    await pool.query(
+      'UPDATE assortment_goods SET stock_quantity = stock_quantity + $1 WHERE id = $2',
+      [quantity, id],
+    );
+
+    res.status(204).send();
+  } catch (error) {
+    res.json({
+      status: 500,
+      message: error.message,
+    });
+  }
+});
+
 export default router;
